@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -11,8 +12,27 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
+
+func DBConn() (*pgxpool.Pool, error) {
+	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		return nil, fmt.Errorf("Unable to Connect to Database%w", err)
+	}
+
+	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = pool.Ping(pingCtx)
+
+	if err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("Database Unreachable%w", err)
+	}
+
+	return pool, err
+}
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -27,6 +47,14 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+
+	pool, err := DBConn()
+	if err != nil {
+		slog.Error("Connection Unsucceed", "error", err)
+		os.Exit(1)
+	}
+
+	defer pool.Close()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler)
