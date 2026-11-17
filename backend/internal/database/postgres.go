@@ -11,7 +11,7 @@ import (
 func DBConn(ConnString string) (*pgxpool.Pool, error) {
 	pool, err := pgxpool.New(context.Background(), ConnString)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to Connect to Database: %w", err)
+		return nil, fmt.Errorf("unable to connect to database: %w", err)
 	}
 
 	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -20,7 +20,7 @@ func DBConn(ConnString string) (*pgxpool.Pool, error) {
 
 	if err != nil {
 		pool.Close()
-		return nil, fmt.Errorf("Database Unreachable: %w", err)
+		return nil, fmt.Errorf("database unreachable: %w", err)
 	}
 
 	return pool, nil
