@@ -19,7 +19,7 @@ func main() {
 
 	pool, err := database.DBConn(cfg.ConnStr)
 	if err != nil {
-		slog.Error("Connection Unsucceed", "error", err)
+		slog.Error("database connection failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
