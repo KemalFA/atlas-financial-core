@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -11,9 +12,10 @@ import (
 )
 
 var (
-	ErrOwnerName  = fmt.Errorf("Name Cant Be Empty")
-	ErrCurrencies = fmt.Errorf("Currencies is not Valid")
-	ErrBalance    = fmt.Errorf("Balance Cant Be Negative")
+	ErrOwnerName         = errors.New("Name Cant Be Empty")
+	ErrInvalidCurrencies = errors.New("Currencies is not Valid")
+	ErrEmptyCurrencies   = errors.New("Currency Cant Be Empty")
+	ErrBalance           = errors.New("Balance Cant Be Negative")
 )
 
 type InputAccount struct {
@@ -54,8 +56,8 @@ func GenerateAccountNumber() (string, error) {
 
 func (s *Service) CreateAccount(ctx context.Context, input InputAccount) (Account, error) {
 	var err error
-	trimmed := strings.ToUpper(strings.TrimSpace(input.OwnerName))
-	currencies := IsValidCurrency(input.Currency)
+	trimmed := strings.TrimSpace(input.OwnerName)
+	currencies := IsValidCurrency(strings.ToUpper(input.Currency))
 	input.OwnerName = trimmed
 
 	if trimmed == "" {
@@ -63,30 +65,30 @@ func (s *Service) CreateAccount(ctx context.Context, input InputAccount) (Accoun
 	}
 
 	if input.Currency == "" {
-		return Account{}, fmt.Errorf("Currency Cant Be Empty")
+		return Account{}, ErrEmptyCurrencies
 	}
 
 	if !currencies {
-		return Account{}, ErrCurrencies
+		return Account{}, ErrInvalidCurrencies
 	}
 
 	if input.Balance < 0 {
 		return Account{}, ErrBalance
 	}
 
-	AccNum, err := GenerateAccountNumber()
-	if AccNum == "" {
+	accNum, err := GenerateAccountNumber()
+	if err != nil {
 		return Account{}, err
 	}
 
-	NewAccount := Account{
-		AccountNumber: AccNum,
+	newAccount := Account{
+		AccountNumber: accNum,
 		OwnerName:     trimmed,
 		Currency:      input.Currency,
 		Balance:       input.Balance,
 	}
 
-	result, err := s.repo.CreateAccount(ctx, NewAccount)
+	result, err := s.repo.CreateAccount(ctx, newAccount)
 	if err != nil {
 		return Account{}, fmt.Errorf("Failed to CreateAccount: %w", err)
 	}
