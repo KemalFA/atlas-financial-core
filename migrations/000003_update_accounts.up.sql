@@ -1,0 +1,4 @@
+ALTER TABLE accounts 
+ALTER COLUMN owner_name SET NOT NULL,
+ALTER COLUMN currency SET NOT NULL;
+
