@@ -7,7 +7,7 @@ import (
 
 	"atlas-financial-core/internal/config"
 	"atlas-financial-core/internal/database"
-	"atlas-financial-core/internal/handler"
+	"atlas-financial-core/internal/health"
 	"atlas-financial-core/internal/server"
 )
 
@@ -26,7 +26,7 @@ func main() {
 	defer pool.Close()
 
 	mux := http.NewServeMux()
-	handler.HealthRoute(mux)
+	health.HealthRoute(mux)
 
 	server.Run(cfg.Port, mux, logger)
 
