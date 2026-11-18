@@ -67,8 +67,22 @@ func (h *Handler) FindByAccountNumberHandler(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+func (h *Handler) ListAccountsHandler(w http.ResponseWriter, r *http.Request) {
+	data, err := h.s.ListAccounts(r.Context())
+	if err != nil {
+		response.ErrorWriter(w, http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "an unexpected error occurred")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(data)
+	if err != nil {
+		slog.Error("failed to encode json response", slog.String("error", err.Error()))
+	}
+}
+
 func (h *Handler) RegisterRoute(mux *http.ServeMux) {
 	mux.HandleFunc("POST /accounts", h.CreateHandler)
 	mux.HandleFunc("GET /accounts/{account_number}", h.FindByAccountNumberHandler)
-	//mux.HandleFunc("GET /accounts", h.ListHandler)
+	mux.HandleFunc("GET /accounts", h.ListAccountsHandler)
 }
