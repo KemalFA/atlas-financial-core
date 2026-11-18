@@ -13,7 +13,7 @@ var ErrAccountNotFound = errors.New("account not found")
 
 type Repository interface {
 	CreateAccount(ctx context.Context, account Account) (Account, error)
-	FindAccount(ctx context.Context, id string) (Account, error)
+	FindByAccountNumber(ctx context.Context, accounNumber string) (Account, error)
 	ListAccounts(ctx context.Context) ([]Account, error)
 }
 
@@ -41,9 +41,9 @@ func (r *DataRepository) CreateAccount(ctx context.Context, account Account) (Ac
 	return data, nil
 }
 
-func (r *DataRepository) FindAccount(ctx context.Context, id string) (Account, error) {
-	query := `SELECT id, account_number, owner_name, currency, balance, created_at, updated_at FROM accounts WHERE id = $1`
-	rows, err := r.db.Query(ctx, query, id)
+func (r *DataRepository) FindByAccountNumber(ctx context.Context, accountNumber string) (Account, error) {
+	query := `SELECT id, account_number, owner_name, currency, balance, created_at, updated_at FROM accounts WHERE account_number = $1`
+	rows, err := r.db.Query(ctx, query, accountNumber)
 	if err != nil {
 		return Account{}, fmt.Errorf("failed to query account: %w", err)
 	}

@@ -12,16 +12,18 @@ import (
 )
 
 var (
-	ErrOwnerName         = errors.New("Name Cant Be Empty")
-	ErrInvalidCurrencies = errors.New("Currencies is not Valid")
-	ErrEmptyCurrencies   = errors.New("Currency Cant Be Empty")
-	ErrBalance           = errors.New("Balance Cant Be Negative")
+	ErrOwnerName          = errors.New("Name Cant Be Empty")
+	ErrInvalidCurrencies  = errors.New("Currencies is not Valid")
+	ErrEmptyCurrencies    = errors.New("Currency Cant Be Empty")
+	ErrInitialDeposit     = errors.New("Minimum Deposit Must Be Rp100.000")
+	ErrEmptyAccountNumber = errors.New("Account Number Cant Be Empty")
+	ErrNotIDR             = errors.New("Currencies Available is Only IDR")
 )
 
-type InputAccount struct {
-	OwnerName string `json:"owner_name"`
-	Currency  string `json:"currency"`
-	Balance   int64  `json:"balance"`
+type InputCreateAccount struct {
+	OwnerName      string `json:"owner_name"`
+	Currency       string `json:"currency"`
+	InitialDeposit int64  `json:"initial_deposit"`
 }
 
 type Service struct {
@@ -54,17 +56,20 @@ func GenerateAccountNumber() (string, error) {
 	return accNum, nil
 }
 
-func (s *Service) CreateAccount(ctx context.Context, input InputAccount) (Account, error) {
+// Create Account Service
+func (s *Service) CreateAccount(ctx context.Context, input InputCreateAccount) (Account, error) {
 	var err error
-	trimmed := strings.TrimSpace(input.OwnerName)
-	currencies := IsValidCurrency(strings.ToUpper(input.Currency))
-	input.OwnerName = trimmed
+	trimmedOwnerName := strings.TrimSpace(input.OwnerName)
+	input.OwnerName = trimmedOwnerName
 
-	if trimmed == "" {
+	fixedCurrencies := strings.ToUpper(strings.TrimSpace(input.Currency))
+	currencies := IsValidCurrency(fixedCurrencies)
+
+	if trimmedOwnerName == "" {
 		return Account{}, ErrOwnerName
 	}
 
-	if input.Currency == "" {
+	if fixedCurrencies == "" {
 		return Account{}, ErrEmptyCurrencies
 	}
 
@@ -72,8 +77,12 @@ func (s *Service) CreateAccount(ctx context.Context, input InputAccount) (Accoun
 		return Account{}, ErrInvalidCurrencies
 	}
 
-	if input.Balance < 0 {
-		return Account{}, ErrBalance
+	if fixedCurrencies != "IDR" {
+		return Account{}, ErrNotIDR
+	}
+
+	if input.InitialDeposit < 100000 {
+		return Account{}, ErrInitialDeposit
 	}
 
 	accNum, err := GenerateAccountNumber()
@@ -83,15 +92,30 @@ func (s *Service) CreateAccount(ctx context.Context, input InputAccount) (Accoun
 
 	newAccount := Account{
 		AccountNumber: accNum,
-		OwnerName:     trimmed,
-		Currency:      input.Currency,
-		Balance:       input.Balance,
+		OwnerName:     trimmedOwnerName,
+		Currency:      fixedCurrencies,
+		Balance:       input.InitialDeposit,
 	}
 
-	result, err := s.repo.CreateAccount(ctx, newAccount)
+	create, err := s.repo.CreateAccount(ctx, newAccount)
 	if err != nil {
-		return Account{}, fmt.Errorf("Failed to CreateAccount: %w", err)
+		return Account{}, fmt.Errorf("Failed to create account: %w", err)
 	}
 
-	return result, nil
+	return create, nil
+}
+
+func (s *Service) FindByAccountNumber(ctx context.Context, accountNumber string) (Account, error) {
+	trimmedAccNum := strings.TrimSpace(accountNumber)
+	if trimmedAccNum == "" {
+		return Account{}, ErrEmptyAccountNumber
+	}
+
+	find, err := s.repo.FindByAccountNumber(ctx, trimmedAccNum)
+
+	if err != nil {
+		return Account{}, fmt.Errorf("Failed to search account: %w", err)
+	}
+
+	return find, nil
 }
