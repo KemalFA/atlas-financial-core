@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrAccountNotFound = errors.New("account not found")
 
 type Repository interface {
 	CreateAccount(ctx context.Context, account Account) (Account, error)

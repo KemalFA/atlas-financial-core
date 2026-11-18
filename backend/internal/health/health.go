@@ -16,5 +16,5 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func HealthRoute(mux *http.ServeMux) {
-	mux.HandleFunc("/health", HealthHandler)
+	mux.HandleFunc("GET /health", HealthHandler)
 }

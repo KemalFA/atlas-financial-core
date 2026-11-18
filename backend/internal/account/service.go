@@ -18,6 +18,7 @@ var (
 	ErrInitialDeposit     = errors.New("Minimum Deposit Must Be Rp100.000")
 	ErrEmptyAccountNumber = errors.New("Account Number Cant Be Empty")
 	ErrNotIDR             = errors.New("Currencies Available is Only IDR")
+	ErrAccountNotFound    = errors.New("account not found")
 )
 
 type InputCreateAccount struct {
