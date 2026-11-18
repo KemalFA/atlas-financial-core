@@ -99,7 +99,7 @@ func (s *Service) CreateAccount(ctx context.Context, input InputCreateAccount) (
 
 	create, err := s.repo.CreateAccount(ctx, newAccount)
 	if err != nil {
-		return Account{}, fmt.Errorf("Failed to create account: %w", err)
+		return Account{}, fmt.Errorf("failed to create account: %w", err)
 	}
 
 	return create, nil
@@ -114,8 +114,17 @@ func (s *Service) FindByAccountNumber(ctx context.Context, accountNumber string)
 	find, err := s.repo.FindByAccountNumber(ctx, trimmedAccNum)
 
 	if err != nil {
-		return Account{}, fmt.Errorf("Failed to search account: %w", err)
+		return Account{}, fmt.Errorf("failed to search account: %w", err)
 	}
 
 	return find, nil
+}
+
+func (s *Service) ListAccounts(ctx context.Context) ([]Account, error) {
+	list, err := s.repo.ListAccounts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get list account: %w", err)
+	}
+
+	return list, nil
 }
