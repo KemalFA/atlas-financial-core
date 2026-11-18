@@ -1,0 +1,3 @@
+ALTER TABLE accounts 
+    ALTER COLUMN currency DROP NOT NULL,
+    ALTER COLUMN owner_name DROP NOT NULL;
