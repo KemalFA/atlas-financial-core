@@ -56,6 +56,10 @@ func (h *Handler) FindByAccountNumberHandler(w http.ResponseWriter, r *http.Requ
 			response.ErrorWriter(w, http.StatusNotFound, "ACCOUNT_NOT_FOUND", err.Error())
 			return
 		}
+		if errors.Is(err, ErrEmptyAccountNumber) {
+			response.ErrorWriter(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
 		response.ErrorWriter(w, http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "an unexpected error occurred")
 		return
 	}

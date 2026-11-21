@@ -106,6 +106,7 @@ func (s *Service) CreateAccount(ctx context.Context, input InputCreateAccount) (
 	return create, nil
 }
 
+// FInd by Account Number Service
 func (s *Service) FindByAccountNumber(ctx context.Context, accountNumber string) (Account, error) {
 	trimmedAccNum := strings.TrimSpace(accountNumber)
 	if trimmedAccNum == "" {
