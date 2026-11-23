@@ -22,7 +22,7 @@ func (h *Handler) CreateHandler(w http.ResponseWriter, r *http.Request) {
 	input := InputCreateAccount{}
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		response.ErrorWriter(w, 400, "JSON_ERROR_DECODE", "JSON decoding error")
+		response.ErrorWriter(w, http.StatusBadRequest, "JSON_ERROR_DECODE", "JSON decoding error")
 		return
 	}
 	data, err := h.s.CreateAccount(r.Context(), input)
@@ -61,6 +61,7 @@ func (h *Handler) FindByAccountNumberHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		response.ErrorWriter(w, http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "an unexpected error occurred")
+		slog.Error("detail error: ", slog.String("error", err.Error()))
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
