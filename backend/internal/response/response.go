@@ -1,4 +1,4 @@
-package main
+package response
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ type ErrorResponse struct {
 	Error ErrorDetail `json:"error"`
 }
 
-func errorWriter(w http.ResponseWriter, status int, code string, message string) {
+func ErrorWriter(w http.ResponseWriter, status int, code string, message string) {
 	response := ErrorResponse{
 		Error: ErrorDetail{
 			Status:  status,

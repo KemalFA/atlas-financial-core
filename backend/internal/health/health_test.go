@@ -1,4 +1,4 @@
-package main
+package health
 
 import (
 	"encoding/json"
@@ -6,13 +6,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"atlas-financial-core/internal/response"
 )
 
 func TestGetHandlerHealth(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/health", nil)
 	w := httptest.NewRecorder()
 
-	healthHandler(w, r)
+	HealthHandler(w, r)
 
 	res := w.Result()
 
@@ -30,11 +32,11 @@ func TestPostHealthHandler(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "/health", nil)
 	w := httptest.NewRecorder()
 
-	healthHandler(w, r)
+	HealthHandler(w, r)
 	res := w.Result()
 	defer res.Body.Close()
 
-	var response ErrorResponse
+	var response response.ErrorResponse
 	err := json.NewDecoder(res.Body).Decode(&response)
 
 	if err != nil {

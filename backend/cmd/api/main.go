@@ -1,65 +1,46 @@
 package main
 
 import (
-	"context"
-	"errors"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
-	"github.com/joho/godotenv"
+	"atlas-financial-core/internal/account"
+	"atlas-financial-core/internal/config"
+	"atlas-financial-core/internal/database"
+	"atlas-financial-core/internal/health"
+	"atlas-financial-core/internal/server"
 )
 
 func main() {
+	//Initiate Logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 
-	//load .env
-	err := godotenv.Load()
+	//Load Configurations of .env
+	cfg := config.Load()
+
+	//Get DB Connection string and make Pool Connection
+	pool, err := database.DBConn(cfg.ConnStr)
 	if err != nil {
-		logger.Error("No .env file found; using system environment variables")
+		slog.Error("database connection failed", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
+	defer pool.Close()
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
+	//Initiate mux to make endpoint
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", healthHandler)
 
-	server := &http.Server{
-		Addr:              ":" + port,
-		Handler:           responseLog(mux, logger),
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      15 * time.Second,
-		IdleTimeout:       60 * time.Second,
-	}
+	//Initiate Account Repo, Service and Handler
+	accountRepo := account.NewRepository(pool)
+	accountService := account.NewService(accountRepo)
+	accountHandler := account.NewHandler(accountService)
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
+	//Endpoint
+	health.HealthRoute(mux)           //Server health endpoint
+	accountHandler.RegisterRoute(mux) //Account Endpoint
 
-	go func() {
-		log.Println("Server start on :" + port)
-		err := server.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatal(err)
-		}
-	}()
-	<-ctx.Done()
-	log.Println("Shutdown Signal Received")
+	//Run Server
+	server.Run(cfg.Port, mux, logger)
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err = server.Shutdown(shutdownCtx)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Println("Server Has Shutdown Gracefully")
 }
