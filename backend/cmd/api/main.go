@@ -10,6 +10,7 @@ import (
 	"atlas-financial-core/internal/database"
 	"atlas-financial-core/internal/health"
 	"atlas-financial-core/internal/server"
+	"atlas-financial-core/internal/transfer"
 )
 
 func main() {
@@ -36,9 +37,14 @@ func main() {
 	accountService := account.NewService(accountRepo)
 	accountHandler := account.NewHandler(accountService)
 
+	transfersRepo := transfer.NewRepository(pool)
+	transfersService := transfer.NewService(transfersRepo)
+	transfersHandler := transfer.NewHandler(transfersService)
+
 	//Endpoint
-	health.HealthRoute(mux)           //Server health endpoint
-	accountHandler.RegisterRoute(mux) //Account Endpoint
+	health.HealthRoute(mux)             //Server health endpoint
+	accountHandler.RegisterRoute(mux)   //Account Endpoint
+	transfersHandler.RegisterRoute(mux) //transfer handler	
 
 	//Run Server
 	server.Run(cfg.Port, mux, logger)
