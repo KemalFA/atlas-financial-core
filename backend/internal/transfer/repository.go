@@ -45,6 +45,8 @@ func (r *DataRepository) ExecuteTransfer(ctx context.Context, transfer Transfer)
 	var senderBalance int64
 	var receiverBalance int64
 	var pgErr *pgconn.PgError
+	var senderCurrencies string
+	var receiverCurrencies string
 
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
@@ -72,9 +74,7 @@ func (r *DataRepository) ExecuteTransfer(ctx context.Context, transfer Transfer)
 
 	for _, validate := range dataTx {
 		if validate.ID == transfer.AccountSenderID {
-			if validate.Currency != "IDR" {
-				return Transfer{}, ErrCurrenciesNotMatch
-			}
+			senderCurrencies = validate.Currency
 			if transfer.Amount > validate.Balance {
 				return Transfer{}, ErrInsufficientBalance
 			}
@@ -83,12 +83,13 @@ func (r *DataRepository) ExecuteTransfer(ctx context.Context, transfer Transfer)
 		}
 
 		if validate.ID == transfer.AccountReceiverID {
-			if validate.Currency != "IDR" {
-				return Transfer{}, ErrCurrenciesNotMatch
-			}
-
+			receiverCurrencies = validate.Currency
 			receiverBalance = validate.Balance + transfer.Amount
 		}
+	}
+
+	if senderCurrencies != receiverCurrencies {
+		return Transfer{}, ErrCurrenciesNotMatch
 	}
 
 	query = `UPDATE accounts SET balance = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
@@ -108,13 +109,16 @@ func (r *DataRepository) ExecuteTransfer(ctx context.Context, transfer Transfer)
 	rows, err = tx.Query(ctx, queryInsert, transfer.AccountSenderID, transfer.AccountReceiverID, transfer.Amount, transfer.Purpose, transfer.IdempotencyKey)
 
 	if err != nil {
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "transfers_idempotency_key_key" {
+			return Transfer{}, ErrDuplicateIdempotencyKey
+		}
 		return Transfer{}, fmt.Errorf("unable to insert transfer: %w", err)
 	}
 
 	data, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[Transfer])
 
 	if err != nil {
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "transfers_idempotency_key_key" {
 			return Transfer{}, ErrDuplicateIdempotencyKey
 		}
 		return Transfer{}, fmt.Errorf("unable to scan transfer: %w", err)

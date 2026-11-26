@@ -174,36 +174,6 @@ func TestExecuteTransferHandler_ValidationError(t *testing.T) {
 			repo:    FakeRepository{},
 			wantMsg: ErrInvalidAmount.Error(),
 		},
-		{
-			name:           "insufficient balance",
-			idempotencyKey: "idem-key-1",
-			input: Transfer{
-				AccountSenderID:   "sender-1",
-				AccountReceiverID: "receiver-1",
-				Amount:            500000,
-				Purpose:           "payment",
-			},
-			repo: FakeRepository{
-				findErr:    pgx.ErrNoRows,
-				executeErr: ErrInsufficientBalance,
-			},
-			wantMsg: ErrInsufficientBalance.Error(),
-		},
-		{
-			name:           "currencies not match",
-			idempotencyKey: "idem-key-1",
-			input: Transfer{
-				AccountSenderID:   "sender-1",
-				AccountReceiverID: "receiver-1",
-				Amount:            50000,
-				Purpose:           "payment",
-			},
-			repo: FakeRepository{
-				findErr:    pgx.ErrNoRows,
-				executeErr: ErrCurrenciesNotMatch,
-			},
-			wantMsg: ErrCurrenciesNotMatch.Error(),
-		},
 	}
 
 	for _, tt := range tests {
@@ -306,8 +276,8 @@ func TestExecuteTransferHandler_AccountNotFound(t *testing.T) {
 		t.Errorf("expected error code NOT_FOUND_ERROR, got %s", errResp.Error.Code)
 	}
 
-	if errResp.Error.Message != "account not found" {
-		t.Errorf("expected error message account not found, got %s", errResp.Error.Message)
+	if errResp.Error.Message != "sender or receiver account not found" {
+		t.Errorf("expected error message sender or receiver account not found, got %s", errResp.Error.Message)
 	}
 
 	if !dataDummy.executeCalled {
@@ -373,8 +343,8 @@ func TestExecuteTransferHandler_Conflict(t *testing.T) {
 		t.Errorf("expected error code CONFLICT_ERROR, got %s", errResp.Error.Code)
 	}
 
-	if errResp.Error.Message != "conflict account value mismatch" {
-		t.Errorf("expected error message conflict account value mismatch, got %s", errResp.Error.Message)
+	if errResp.Error.Message != "amount not match" {
+		t.Errorf("expected error message amount not match, got %s", errResp.Error.Message)
 	}
 
 	if !dataDummy.findCalled {

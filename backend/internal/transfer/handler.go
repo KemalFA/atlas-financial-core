@@ -31,19 +31,19 @@ func (h *Handler) ExecuteTransfer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrIdempotencyKeyMissing),
-			errors.Is(err, ErrInsufficientBalance),
-			errors.Is(err, ErrCurrenciesNotMatch),
 			errors.Is(err, ErrSameAccountID),
 			errors.Is(err, ErrInvalidAmount):
 			response.ErrorWriter(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 
 		case errors.Is(err, ErrSenderIdNotMatch),
+			errors.Is(err, ErrInsufficientBalance),
 			errors.Is(err, ErrReceiverIdNotMatch),
+			errors.Is(err, ErrCurrenciesNotMatch),
 			errors.Is(err, ErrAmountNotMatch),
 			errors.Is(err, ErrPurposeNotMatch):
-			response.ErrorWriter(w, http.StatusConflict, "CONFLICT_ERROR", "conflict account value mismatch")
+			response.ErrorWriter(w, http.StatusConflict, "CONFLICT_ERROR", err.Error())
 		case errors.Is(err, ErrAccountNotFound):
-			response.ErrorWriter(w, http.StatusNotFound, "NOT_FOUND_ERROR", "account not found")
+			response.ErrorWriter(w, http.StatusNotFound, "NOT_FOUND_ERROR", err.Error())
 		default:
 			slog.Error("internal server error", slog.String("error", err.Error()))
 			response.ErrorWriter(w, http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "an unexpected error occurred")
