@@ -3,9 +3,11 @@ package transfer
 import (
 	"atlas-financial-core/internal/account"
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -42,6 +44,7 @@ func (r *DataRepository) FindByIdempotencyKey(ctx context.Context, transfer Tran
 func (r *DataRepository) ExecuteTransfer(ctx context.Context, transfer Transfer) (Transfer, error) {
 	var senderBalance int64
 	var receiverBalance int64
+	var pgErr *pgconn.PgError
 
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
@@ -90,6 +93,7 @@ func (r *DataRepository) ExecuteTransfer(ctx context.Context, transfer Transfer)
 
 	query = `UPDATE accounts SET balance = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1`
 	_, err = tx.Exec(ctx, query, transfer.AccountSenderID, senderBalance)
+
 	if err != nil {
 		return Transfer{}, fmt.Errorf("failed to query %w", err)
 	}
@@ -102,15 +106,21 @@ func (r *DataRepository) ExecuteTransfer(ctx context.Context, transfer Transfer)
 
 	queryInsert := `INSERT INTO transfers (account_sender_id, account_receiver_id, amount, purpose, idempotency_key) VALUES ($1, $2, $3, $4, $5) RETURNING id, account_sender_id, account_receiver_id, amount, purpose, idempotency_key, created_at`
 	rows, err = tx.Query(ctx, queryInsert, transfer.AccountSenderID, transfer.AccountReceiverID, transfer.Amount, transfer.Purpose, transfer.IdempotencyKey)
+
 	if err != nil {
 		return Transfer{}, fmt.Errorf("unable to insert transfer: %w", err)
 	}
 
 	data, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[Transfer])
+
 	if err != nil {
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return Transfer{}, ErrDuplicateIdempotencyKey
+		}
 		return Transfer{}, fmt.Errorf("unable to scan transfer: %w", err)
 	}
 	err = tx.Commit(ctx)
+
 	if err != nil {
 		return Transfer{}, fmt.Errorf("failed to commit %w", err)
 	}

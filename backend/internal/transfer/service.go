@@ -58,8 +58,13 @@ func (s *Service) ExecuteTransfer(ctx context.Context, transfer Transfer) (Trans
 	if err == nil {
 		return data, nil
 	}
+
 	if errors.Is(err, pgx.ErrNoRows) {
-		return s.repo.ExecuteTransfer(ctx, transfer)
+		res, err := s.repo.ExecuteTransfer(ctx, transfer)
+		if errors.Is(err, ErrDuplicateIdempotencyKey) {
+			return s.FindByIdempotencyKey(ctx, transfer)
+		}
+		return res, err
 	}
 
 	return Transfer{}, err
